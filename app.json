@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "Skill Learning App",
+    "slug": "skill-learning-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+
+    "icon": "./assets/icon.png",
+
+    "scheme": "skilllearningapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+
+    "ios": {
+      "supportsTablet": true,
+      "icon": "./assets/icon.png"
+    },
+
+    "android": {
+      "package": "com.aditya98_kandalkar.skilllearningapp",
+
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#ffffff"
+      },
+
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+
+    "web": {
+      "favicon": "./assets/icon.png",
+      "output": "static"
+    },
+
+    "plugins": [
+      "expo-router",
+
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ]
+    ],
+
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+
+    "extra": {
+      "router": {},
+
+      "eas": {
+        "projectId": "d87c7284-e932-414e-8f36-e86b023a4731"
+      }
+    }
+  }
+}
