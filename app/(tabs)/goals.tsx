@@ -1,60 +1,57 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { useGoals } from "../../components/context/GoalContext";
-
-// ✅ SAFE AREA IMPORT
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { useGoals } from "../../components/context/GoalContext";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function Goals() {
   const { goals, addGoal, deleteGoal, updateGoal } = useGoals();
-
-  const [goal, setGoal] = useState("");
+  const { theme, isDarkMode } = useTheme(); // Use Theme Hook
+  const [goalInput, setGoalInput] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const router = useRouter();
-
-  // ✅ SAFE AREA HOOK
   const insets = useSafeAreaInsets();
 
-  // ✅ ADD / UPDATE
   const handleSave = async () => {
-    if (!goal.trim()) {
-      Alert.alert("⚠️", "Please enter a goal");
+    if (!goalInput.trim()) {
+      Alert.alert("⚠️", "Please enter a goal name");
       return;
     }
 
     try {
       if (editingId) {
-        await updateGoal(editingId, goal.trim());
+        await updateGoal(editingId, goalInput.trim());
         setEditingId(null);
       } else {
-        await addGoal(goal.trim());
+        await addGoal(goalInput.trim());
       }
-
-      setGoal("");
+      setGoalInput("");
     } catch (err) {
       console.log("Save Error:", err);
-      Alert.alert("Error", "Something went wrong");
+      Alert.alert("Error", "Could not save goal");
     }
   };
 
-  // ❌ DELETE
   const confirmDelete = (id: string) => {
     Alert.alert(
-      "🗑 Delete Goal",
-      "Are you sure you want to delete this goal?",
+      "Delete Goal",
+      "This will remove the goal and all associated tasks. Continue?",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -62,15 +59,8 @@ export default function Goals() {
           style: "destructive",
           onPress: async () => {
             try {
-              if (!id) {
-                Alert.alert("Error", "Invalid Goal ID");
-                return;
-              }
-
               await deleteGoal(id);
-              Alert.alert("✅ Deleted", "Goal removed successfully");
             } catch (err) {
-              console.log("Delete Error:", err);
               Alert.alert("Error", "Delete failed");
             }
           },
@@ -79,172 +69,303 @@ export default function Goals() {
     );
   };
 
-  // ✏️ EDIT
   const handleEdit = (item: any) => {
-    setGoal(item.title);
+    setGoalInput(item.title);
     setEditingId(item.id);
   };
 
+  const getGoalProgress = (tasks: any[]) => {
+    if (!tasks || tasks.length === 0) return 0;
+    const completed = tasks.filter((t) => t.completed).length;
+    return Math.round((completed / tasks.length) * 100);
+  };
+
   return (
-    // ✅ SAFE AREA WRAPPER
-    <SafeAreaView style={{ flex: 1 }}>
-      <View
-        style={[
-          styles.container,
-          {
-            paddingTop: insets.top + 5, // 🔥 FIX FOR NOTCH
-          },
-        ]}
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        {/* HEADER */}
-        <Text style={styles.title}>🎯 My Learning Goals</Text>
-        <Text style={styles.subtitle}>
-          Build discipline. Track progress. Win daily 🚀
-        </Text>
-
-        {/* INPUT CARD */}
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your goal..."
-            value={goal}
-            onChangeText={setGoal}
-          />
-
-          <Pressable style={styles.addButton} onPress={handleSave}>
-            <Text style={styles.addButtonText}>
-              {editingId ? "UPDATE" : "ADD"}
+        <View style={[styles.container, { paddingTop: insets.top }]}>
+          {/* HEADER */}
+          <View style={styles.headerSection}>
+            <Text style={[styles.title, { color: theme.text }]}>
+              My Goals 🎯
             </Text>
-          </Pressable>
-        </View>
+            <Text style={[styles.subtitle, { color: theme.subText }]}>
+              {goals.length} active learning tracks
+            </Text>
+          </View>
 
-        {/* LIST */}
-        <FlatList
-          data={goals}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={<Text style={styles.empty}>🚀 No goals yet</Text>}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              {/* TITLE */}
-              <Pressable
-                style={{ flex: 1 }}
-                onPress={() => router.push(`/goal/${item.id}`)}
-              >
-                <Text style={styles.goalTitle}>
-                  {item.title || "Untitled Goal"}
+          {/* INPUT CARD */}
+          <View
+            style={[
+              styles.inputWrapper,
+              { backgroundColor: theme.card, shadowColor: theme.tint },
+            ]}
+          >
+            <TextInput
+              style={[styles.input, { color: theme.text }]}
+              placeholder="e.g. Master React Native"
+              placeholderTextColor={isDarkMode ? "#94a3b8" : "#64748b"}
+              value={goalInput}
+              onChangeText={setGoalInput}
+            />
+            <Pressable
+              style={[
+                styles.addButton,
+                { backgroundColor: editingId ? "#0ea5e9" : theme.tint },
+              ]}
+              onPress={handleSave}
+            >
+              <Ionicons
+                name={editingId ? "checkmark" : "add"}
+                size={24}
+                color="white"
+              />
+            </Pressable>
+          </View>
+
+          {/* GOALS LIST */}
+          <FlatList
+            data={goals}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <View
+                  style={[
+                    styles.emptyIconCircle,
+                    { backgroundColor: isDarkMode ? "#1e293b" : "#eef2ff" },
+                  ]}
+                >
+                  <Ionicons name="flag-outline" size={40} color={theme.tint} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                  No goals yet
                 </Text>
-              </Pressable>
+                <Text style={[styles.emptySub, { color: theme.subText }]}>
+                  Start your first learning journey above!
+                </Text>
+              </View>
+            }
+            renderItem={({ item }) => {
+              const progress = getGoalProgress(item.tasks || []);
+              const taskCount = item.tasks?.length || 0;
 
-              {/* EDIT */}
-              <Pressable
-                style={styles.iconBtn}
-                onPress={() => handleEdit(item)}
-              >
-                <Text style={styles.edit}>✏️</Text>
-              </Pressable>
+              return (
+                <View style={[styles.card, { backgroundColor: theme.card }]}>
+                  <View style={styles.cardMain}>
+                    <Pressable
+                      style={{ flex: 1 }}
+                      onPress={() => router.push(`/goal/${item.id}`)}
+                    >
+                      <View style={styles.goalInfo}>
+                        <Text
+                          style={[styles.goalTitle, { color: theme.text }]}
+                          numberOfLines={1}
+                        >
+                          {item.title}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.taskCountText,
+                            { color: theme.subText },
+                          ]}
+                        >
+                          {taskCount} {taskCount === 1 ? "task" : "tasks"}
+                        </Text>
+                      </View>
 
-              {/* DELETE */}
-              <Pressable
-                style={styles.deleteBtn}
-                onPress={() => confirmDelete(item.id)}
-              >
-                <Text style={styles.delete}>🗑</Text>
-              </Pressable>
-            </View>
-          )}
-        />
-      </View>
+                      {/* Progress Bar per Goal */}
+                      <View style={styles.goalProgressContainer}>
+                        <View
+                          style={[
+                            styles.goalProgressBg,
+                            {
+                              backgroundColor: isDarkMode
+                                ? "#334155"
+                                : "#f1f5f9",
+                            },
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.goalProgressFill,
+                              {
+                                width: `${progress}%`,
+                                backgroundColor: theme.tint,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Text
+                          style={[
+                            styles.progressPercentText,
+                            { color: theme.subText },
+                          ]}
+                        >
+                          {progress}%
+                        </Text>
+                      </View>
+                    </Pressable>
+
+                    <View
+                      style={[
+                        styles.actionGroup,
+                        { borderLeftColor: isDarkMode ? "#334155" : "#f1f5f9" },
+                      ]}
+                    >
+                      <Pressable
+                        style={styles.actionIcon}
+                        onPress={() => handleEdit(item)}
+                      >
+                        <Ionicons
+                          name="pencil-outline"
+                          size={20}
+                          color={isDarkMode ? "#94a3b8" : "#64748b"}
+                        />
+                      </Pressable>
+                      <Pressable
+                        style={styles.actionIcon}
+                        onPress={() => confirmDelete(item.id)}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={20}
+                          color="#ef4444"
+                        />
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              );
+            }}
+          />
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-// 🎨 STYLES (UNCHANGED)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#eef2ff",
   },
-
+  headerSection: {
+    marginBottom: 20,
+  },
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#0f172a",
   },
-
   subtitle: {
-    color: "#64748b",
-    marginBottom: 20,
+    fontSize: 15,
+    marginTop: 4,
   },
-
   inputWrapper: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    padding: 6,
-    borderRadius: 14,
-    elevation: 4,
-    marginBottom: 20,
+    padding: 8,
+    borderRadius: 20,
+    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    marginBottom: 25,
+    alignItems: "center",
   },
-
   input: {
     flex: 1,
-    padding: 14,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    height: 50,
+    fontSize: 16,
   },
-
   addButton: {
-    backgroundColor: "#6366f1",
-    paddingHorizontal: 20,
-    justifyContent: "center",
-    borderRadius: 10,
-  },
-
-  addButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-
-  card: {
-    backgroundColor: "#fff",
-    padding: 16,
+    width: 48,
+    height: 48,
     borderRadius: 16,
-    marginBottom: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  card: {
+    borderRadius: 20,
+    marginBottom: 16,
+    padding: 16,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
+  cardMain: {
     flexDirection: "row",
     alignItems: "center",
-    elevation: 4,
   },
-
+  goalInfo: {
+    marginBottom: 12,
+  },
   goalTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1e293b",
+    fontSize: 17,
+    fontWeight: "bold",
+    marginBottom: 2,
   },
-
-  iconBtn: {
-    padding: 6,
+  taskCountText: {
+    fontSize: 13,
+    fontWeight: "500",
   },
-
-  deleteBtn: {
-    backgroundColor: "#fee2e2",
-    padding: 6,
-    borderRadius: 8,
+  goalProgressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-
-  edit: {
-    fontSize: 18,
-    marginHorizontal: 8,
+  goalProgressBg: {
+    flex: 1,
+    height: 6,
+    borderRadius: 10,
+    marginRight: 10,
+    overflow: "hidden",
   },
-
-  delete: {
-    fontSize: 18,
-    color: "#dc2626",
+  goalProgressFill: {
+    height: "100%",
+    borderRadius: 10,
   },
-
-  empty: {
+  progressPercentText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    width: 35,
+  },
+  actionGroup: {
+    flexDirection: "column",
+    justifyContent: "center",
+    paddingLeft: 15,
+    borderLeftWidth: 1,
+    marginLeft: 10,
+  },
+  actionIcon: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    marginTop: 80,
+  },
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  emptySub: {
+    fontSize: 14,
+    marginTop: 8,
     textAlign: "center",
-    marginTop: 60,
-    color: "#64748b",
-    fontSize: 16,
+    maxWidth: "80%",
   },
 });
