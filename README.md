@@ -1,50 +1,146 @@
-# Welcome to your Expo app 👋
+🚀 Skill Learning Companion App (React Native + Expo)
+📱 Overview
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Skill Learning App is a modern gamified learning platform built using React Native and Expo.
+It helps users track their learning progress, manage goals, and stay motivated using streaks, XP points, and leaderboard rankings.
 
-## Get started
+✨ Features
+🎯 Goal Management (Add / Track Learning Goals)
+📊 Dashboard with Progress & Activity Insights
+🔥 Streak System (Daily consistency tracking)
+🏆 Leaderboard (Compare with other users)
+📚 Learning Modules (Courses & Videos)
+👤 User Profile with Achievements
+🌙 Dark Mode Support
+🔔 Notifications System
+🔐 Firebase Authentication (Login / Register)
+🧠 Activity Heatmap (Last 60 days progress)
+🛠 Tech Stack
+⚛️ React Native (Expo)
+🔥 Firebase (Authentication + Realtime DB)
+🧩 Context API (State Management)
+🎨 Custom UI Design (Modern + Clean)
+💾 AsyncStorage (Persistence)
+📸 Screenshots
+🏠 Dashboard
 
-1. Install dependencies
+SS
 
-   ```bash
-   npm install
-   ```
+🎯 Goals Page
 
-2. Start the app
+SS
 
-   ```bash
-   npx expo start
-   ```
+📊 Leaderboard
 
-In the output, you'll find options to open the app in a
+SS
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+📚 Learning Page
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+SS
 
-## Get a fresh project
+👤 Profile Page
 
-When you're ready, run:
+SS
+🔐 Login / Register
 
-```bash
-npm run reset-project
-```
+SS
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+⚙️ Installation & Setup
+# Clone the repository
+git clone https://github.com/your-username/skill-learning-app-react.git
 
-## Learn more
+# Navigate to project
+cd skill-learning-app-react
 
-To learn more about developing your project with Expo, look at the following resources:
+# Install dependencies
+npm install
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+# Start the app
+npx expo start
+🔐 Firebase Setup
+Create a Firebase project
+Enable Authentication (Email/Password)
+Create Realtime Database
+Replace config in:
+config/firebase.ts
+skill-learning-app-react/
+│
+├── app/                      # Main application (Expo Router)
+│   ├── (auth)/              # Authentication screens
+│   │   ├── login.tsx
+│   │   └── register.tsx
+│   │
+│   ├── (tabs)/              # Bottom tab navigation screens
+│   │   ├── dashboard.tsx    # Home / Dashboard
+│   │   ├── goals.tsx        # Goals management
+│   │   ├── leaderboard.tsx  # Ranking system
+│   │   ├── learning.tsx     # Learning modules
+│   │   ├── profile.tsx      # User profile
+│   │   ├── _layout.tsx      # Tab layout
+│   │   │
+│   │   └── goal/            # Dynamic goal pages
+│   │       └── [goalId].tsx
+│   │
+│   ├── _layout.tsx          # Root layout (providers setup)
+│   └── index.tsx            # Entry screen / redirect
+│
+├── assets/                  # Static assets
+│   ├── images/              # App images/icons
+│   ├── Videos/              # Learning videos (if any)
+│   └── icon.png
+│
+├── components/              # Reusable UI components
+│   ├── context/             # Context providers
+│   │   ├── AuthContext.tsx
+│   │   ├── GoalContext.tsx
+│   │   └── ThemeContext.tsx
+│   │
+│   ├── ui/                  # UI elements (buttons, icons, etc.)
+│   └── shared components
+│
+├── config/                  # Configuration files
+│   └── firebase.ts          # Firebase setup
+│
+├── constants/               # App constants
+│   └── theme.ts             # Theme & colors
+│
+├── context/                 # Global context (extra)
+│   └── ThemeContext.tsx
+│
+├── hooks/                   # Custom hooks
+│   └── use-theme-color.ts
+│
+├── utils/                   # Utility functions
+│   └── notifications.ts
+│
+├── admin-panel/             # Separate admin dashboard (React + Vite)
+│   ├── src/
+│   ├── public/
+│   └── package.json
+│
+├── scripts/                 # Helper scripts
+│   └── reset-project.js
+│
+├── app.json                 # Expo config
+├── package.json             # Dependencies
+├── tsconfig.json            # TypeScript config
+├── .gitignore
+└── README.md
 
-## Join the community
+🚀 Future Improvements
+📈 Weekly analytics graph
+🤝 Social sharing (friends system)
+🏅 More achievements & badges
+🎥 Video progress tracking
+☁️ Cloud sync improvements
+👨‍💻 Author
 
-Join our community of developers creating universal apps.
+Aditya
+💙 Passionate Web & App Developer
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+⭐ Support
+
+If you like this project:
+
+👉 Give it a ⭐ on GitHub
+👉 Share with your friends
