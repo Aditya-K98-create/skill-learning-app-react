@@ -24,109 +24,66 @@ It helps users track their learning progress, manage goals, and stay motivated u
 📸 Screenshots
 🏠 Dashboard
 
-SS
+(Add screenshot here)
 
 🎯 Goals Page
 
-SS
+(Add screenshot here)
 
 📊 Leaderboard
 
-SS
+(Add screenshot here)
 
 📚 Learning Page
 
-SS
+(Add screenshot here)
 
 👤 Profile Page
 
-SS
+(Add screenshot here)
+
 🔐 Login / Register
 
-SS
+(Add screenshot here)
 
 ⚙️ Installation & Setup
-# Clone the repository
+1. Clone the repository
 git clone https://github.com/your-username/skill-learning-app-react.git
-
-# Navigate to project
+2. Navigate to project
 cd skill-learning-app-react
-
-# Install dependencies
+3. Install dependencies
 npm install
-
-# Start the app
+4. Start the app
 npx expo start
 🔐 Firebase Setup
 Create a Firebase project
 Enable Authentication (Email/Password)
 Create Realtime Database
-Replace config in:
-config/firebase.ts
+Replace config in: config/firebase.ts
+📂 Project Structure
 skill-learning-app-react/
 │
-├── app/                      # Main application (Expo Router)
-│   ├── (auth)/              # Authentication screens
-│   │   ├── login.tsx
-│   │   └── register.tsx
-│   │
-│   ├── (tabs)/              # Bottom tab navigation screens
-│   │   ├── dashboard.tsx    # Home / Dashboard
-│   │   ├── goals.tsx        # Goals management
-│   │   ├── leaderboard.tsx  # Ranking system
-│   │   ├── learning.tsx     # Learning modules
-│   │   ├── profile.tsx      # User profile
-│   │   ├── _layout.tsx      # Tab layout
-│   │   │
-│   │   └── goal/            # Dynamic goal pages
-│   │       └── [goalId].tsx
-│   │
-│   ├── _layout.tsx          # Root layout (providers setup)
-│   └── index.tsx            # Entry screen / redirect
+├── app/
+│   ├── (auth)/
+│   ├── (tabs)/
+│   ├── goal/
+│   ├── _layout.tsx
+│   └── index.tsx
 │
-├── assets/                  # Static assets
-│   ├── images/              # App images/icons
-│   ├── Videos/              # Learning videos (if any)
-│   └── icon.png
+├── assets/
+├── components/
+├── config/
+├── constants/
+├── context/
+├── hooks/
+├── utils/
+├── admin-panel/
+├── scripts/
 │
-├── components/              # Reusable UI components
-│   ├── context/             # Context providers
-│   │   ├── AuthContext.tsx
-│   │   ├── GoalContext.tsx
-│   │   └── ThemeContext.tsx
-│   │
-│   ├── ui/                  # UI elements (buttons, icons, etc.)
-│   └── shared components
-│
-├── config/                  # Configuration files
-│   └── firebase.ts          # Firebase setup
-│
-├── constants/               # App constants
-│   └── theme.ts             # Theme & colors
-│
-├── context/                 # Global context (extra)
-│   └── ThemeContext.tsx
-│
-├── hooks/                   # Custom hooks
-│   └── use-theme-color.ts
-│
-├── utils/                   # Utility functions
-│   └── notifications.ts
-│
-├── admin-panel/             # Separate admin dashboard (React + Vite)
-│   ├── src/
-│   ├── public/
-│   └── package.json
-│
-├── scripts/                 # Helper scripts
-│   └── reset-project.js
-│
-├── app.json                 # Expo config
-├── package.json             # Dependencies
-├── tsconfig.json            # TypeScript config
-├── .gitignore
+├── app.json
+├── package.json
+├── tsconfig.json
 └── README.md
-
 🚀 Future Improvements
 📈 Weekly analytics graph
 🤝 Social sharing (friends system)
@@ -135,8 +92,8 @@ skill-learning-app-react/
 ☁️ Cloud sync improvements
 👨‍💻 Author
 
-Aditya
-💙 Passionate Web & App Developer
+Aditya 💙
+Passionate Web & App Developer
 
 ⭐ Support
 
