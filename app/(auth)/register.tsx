@@ -1,5 +1,9 @@
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { ref, set } from "firebase/database";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,47 +16,57 @@ import {
   TextInput,
   View,
 } from "react-native";
-
-import { LinearGradient } from "expo-linear-gradient";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { ref, set } from "firebase/database";
-import { auth, db } from "../../config/firebase";
-
-// ✅ SAFE AREA
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-
-// ✅ ICON
-import { Ionicons } from "@expo/vector-icons";
+import { auth, db } from "../../config/firebase";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function Register() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { theme, isDarkMode } = useTheme();
+
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const [confirmPassword, setConfirmPassword] = useState(""); // 🟢 Added Confirm Password State
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const handleRegister = async () => {
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      alert("Please fill all fields");
+    if (
+      !name.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !confirmPassword.trim()
+    ) {
+      alert("Please fill all fields ✍️");
+      return;
+    }
+    // 🟢 Validation: Check if passwords match
+    if (password !== confirmPassword) {
+      alert("Passwords do not match! ❌");
+      return;
+    }
+    if (password.length < 6) {
+      alert("Password should be at least 6 characters");
       return;
     }
 
     try {
       setLoading(true);
-
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email.trim(),
         password.trim(),
       );
-
       const user = userCredential.user;
 
       await set(ref(db, `users/${user.uid}`), {
@@ -63,109 +77,233 @@ export default function Register() {
         createdAt: Date.now(),
       });
 
-      alert("Account created successfully 🎉");
-      router.replace("/login");
+      router.replace("/dashboard");
     } catch (error: any) {
-      console.log("Register Error:", error);
-
-      if (error.code === "auth/email-already-in-use") {
-        alert("Email already registered");
-      } else if (error.code === "auth/invalid-email") {
-        alert("Invalid email format");
-      } else if (error.code === "auth/weak-password") {
-        alert("Password must be at least 6 characters");
-      } else {
-        alert("Something went wrong");
-      }
+      alert(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <LinearGradient
-        colors={["#0f172a", "#1e3a8a"]}
-        style={{
-          flex: 1,
-          paddingTop: insets.top + 5,
-        }}
-      >
-        <StatusBar barStyle="light-content" />
+  const bgColors = isDarkMode
+    ? (["#0f172a", "#1e3a8a"] as const)
+    : (["#e0e7ff", "#c7d2fe"] as const);
 
-        {/* 🔥 MAIN FIX */}
+  return (
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: isDarkMode ? "#0f172a" : "#e0e7ff" }}
+    >
+      <LinearGradient colors={bgColors} style={{ flex: 1 }}>
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "android" ? "height" : "padding"}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <ScrollView
-            contentContainerStyle={styles.container}
+            contentContainerStyle={[
+              styles.container,
+              { paddingTop: insets.top + 20 },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* HEADER */}
-            <Text style={styles.title}>🚀 Create Account</Text>
-            <Text style={styles.subtitle}>Start your journey to success</Text>
+            <View style={styles.headerSection}>
+              <Text
+                style={[
+                  styles.title,
+                  { color: isDarkMode ? "#fff" : "#1e293b" },
+                ]}
+              >
+                Start Learning 🚀
+              </Text>
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: isDarkMode ? "#cbd5f5" : "#64748b" },
+                ]}
+              >
+                Create your account to track progress
+              </Text>
+            </View>
 
-            {/* CARD */}
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: theme.card }]}>
               {/* NAME */}
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput
-                placeholder="Enter your full name"
-                placeholderTextColor="#94a3b8"
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-              />
-
-              {/* EMAIL */}
-              <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                placeholder="Enter your email"
-                placeholderTextColor="#94a3b8"
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
-
-              {/* PASSWORD */}
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.passwordWrapper}>
-                <TextInput
-                  placeholder="Create password"
-                  placeholderTextColor="#94a3b8"
-                  secureTextEntry={!showPassword}
-                  style={styles.passwordInput}
-                  value={password}
-                  onChangeText={setPassword}
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDarkMode ? theme.background : "#f8fafc",
+                  },
+                  focusedField === "name" && {
+                    borderColor: theme.tint,
+                    borderWidth: 2,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={focusedField === "name" ? theme.tint : "#94a3b8"}
+                  style={styles.icon}
                 />
-
-                <Pressable onPress={() => setShowPassword(!showPassword)}>
-                  <Ionicons
-                    name={showPassword ? "lock-open" : "lock-closed"}
-                    size={20}
-                    color="#64748b"
-                    style={{ paddingHorizontal: 12 }}
-                  />
-                </Pressable>
+                <TextInput
+                  placeholder="Full Name"
+                  placeholderTextColor="#94a3b8"
+                  style={[
+                    styles.input,
+                    { color: theme.text },
+                    Platform.OS === "web" && ({ outlineStyle: "none" } as any),
+                  ]}
+                  value={name}
+                  onChangeText={setName}
+                  onFocus={() => setFocusedField("name")}
+                  onBlur={() => setFocusedField(null)}
+                  returnKeyType="next"
+                  onSubmitEditing={() => emailRef.current?.focus()}
+                />
               </View>
 
-              {/* BUTTON */}
-              <Pressable style={styles.button} onPress={handleRegister}>
+              {/* EMAIL */}
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDarkMode ? theme.background : "#f8fafc",
+                  },
+                  focusedField === "email" && {
+                    borderColor: theme.tint,
+                    borderWidth: 2,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={focusedField === "email" ? theme.tint : "#94a3b8"}
+                  style={styles.icon}
+                />
+                <TextInput
+                  ref={emailRef}
+                  placeholder="Email Address"
+                  placeholderTextColor="#94a3b8"
+                  style={[
+                    styles.input,
+                    { color: theme.text },
+                    Platform.OS === "web" && ({ outlineStyle: "none" } as any),
+                  ]}
+                  value={email}
+                  onChangeText={setEmail}
+                  onFocus={() => setFocusedField("email")}
+                  onBlur={() => setFocusedField(null)}
+                  returnKeyType="next"
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                />
+              </View>
+
+              {/* PASSWORD */}
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDarkMode ? theme.background : "#f8fafc",
+                  },
+                  focusedField === "password" && {
+                    borderColor: theme.tint,
+                    borderWidth: 2,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={focusedField === "password" ? theme.tint : "#94a3b8"}
+                  style={styles.icon}
+                />
+                <TextInput
+                  ref={passwordRef}
+                  placeholder="Create Password"
+                  placeholderTextColor="#94a3b8"
+                  secureTextEntry={!showPassword}
+                  style={[
+                    styles.input,
+                    { color: theme.text },
+                    Platform.OS === "web" && ({ outlineStyle: "none" } as any),
+                  ]}
+                  value={password}
+                  onChangeText={setPassword}
+                  onFocus={() => setFocusedField("password")}
+                  onBlur={() => setFocusedField(null)}
+                  returnKeyType="next"
+                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                />
+              </View>
+
+              {/* 🟢 CONFIRM PASSWORD COLUMN */}
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDarkMode ? theme.background : "#f8fafc",
+                  },
+                  focusedField === "confirm" && {
+                    borderColor: theme.tint,
+                    borderWidth: 2,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={20}
+                  color={focusedField === "confirm" ? theme.tint : "#94a3b8"}
+                  style={styles.icon}
+                />
+                <TextInput
+                  ref={confirmPasswordRef}
+                  placeholder="Confirm Password"
+                  placeholderTextColor="#94a3b8"
+                  secureTextEntry={!showPassword}
+                  style={[
+                    styles.input,
+                    { color: theme.text },
+                    Platform.OS === "web" && ({ outlineStyle: "none" } as any),
+                  ]}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  onFocus={() => setFocusedField("confirm")}
+                  onBlur={() => setFocusedField(null)}
+                  returnKeyType="done"
+                  onSubmitEditing={handleRegister}
+                />
+              </View>
+
+              <Pressable
+                onPress={handleRegister}
+                disabled={loading}
+                style={({ pressed }) => [
+                  styles.button,
+                  { backgroundColor: theme.tint, opacity: loading ? 0.7 : 1 },
+                  { transform: [{ scale: pressed ? 0.98 : 1 }] },
+                ]}
+              >
                 {loading ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text style={styles.buttonText}>Create Account</Text>
+                  <Text style={styles.buttonText}>Start Learning 🚀</Text>
                 )}
               </Pressable>
             </View>
 
-            {/* LOGIN LINK */}
             <Pressable onPress={() => router.push("/login")}>
-              <Text style={styles.link}>Already have an account? Login</Text>
+              <Text
+                style={[
+                  styles.link,
+                  { color: isDarkMode ? "#fff" : theme.tint },
+                ]}
+              >
+                Already a learner?{" "}
+                <Text style={{ fontWeight: "bold" }}>Login</Text>
+              </Text>
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -174,77 +312,38 @@ export default function Register() {
   );
 }
 
-// 🎨 STYLES (UNCHANGED)
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    justifyContent: "center",
-    flexGrow: 1,
-  },
-
-  title: {
-    fontSize: 30,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#fff",
-  },
-
-  subtitle: {
-    textAlign: "center",
-    marginBottom: 25,
-    color: "#cbd5f5",
-  },
-
+  container: { padding: 24, justifyContent: "center", flexGrow: 1 },
+  headerSection: { marginBottom: 25, alignItems: "center" },
+  title: { fontSize: 32, fontWeight: "800" },
+  subtitle: { marginTop: 8, fontSize: 16, fontWeight: "500" },
   card: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 18,
-    elevation: 6,
+    padding: 24,
+    borderRadius: 30,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
   },
-
-  label: {
-    fontSize: 14,
-    color: "#475569",
-    marginBottom: 5,
-  },
-
-  input: {
-    backgroundColor: "#f8fafc",
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 15,
-  },
-
-  passwordWrapper: {
+  inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    marginBottom: 15,
+    borderRadius: 18,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: "transparent",
+    paddingHorizontal: 15,
+    height: 60,
   },
-
-  passwordInput: {
-    flex: 1,
-    padding: 14,
-  },
-
+  icon: { marginRight: 12 },
+  input: { flex: 1, fontSize: 16, fontWeight: "500" },
   button: {
-    backgroundColor: "#4f46e5",
-    padding: 16,
-    borderRadius: 12,
+    height: 60,
+    borderRadius: 18,
+    justifyContent: "center",
     alignItems: "center",
     marginTop: 10,
   },
-
-  buttonText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-
-  link: {
-    textAlign: "center",
-    marginTop: 20,
-    color: "#fff",
-  },
+  buttonText: { color: "white", fontWeight: "bold", fontSize: 18 },
+  link: { textAlign: "center", marginTop: 30, fontSize: 15 },
 });
