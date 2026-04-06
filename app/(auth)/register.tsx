@@ -35,7 +35,7 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState(""); // 🟢 Added Confirm Password State
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -50,7 +50,6 @@ export default function Register() {
       alert("Please fill all fields ✍️");
       return;
     }
-    // 🟢 Validation: Check if passwords match
     if (password !== confirmPassword) {
       alert("Passwords do not match! ❌");
       return;
@@ -128,7 +127,6 @@ export default function Register() {
             </View>
 
             <View style={[styles.card, { backgroundColor: theme.card }]}>
-              {/* NAME */}
               <View
                 style={[
                   styles.inputWrapper,
@@ -150,11 +148,7 @@ export default function Register() {
                 <TextInput
                   placeholder="Full Name"
                   placeholderTextColor="#94a3b8"
-                  style={[
-                    styles.input,
-                    { color: theme.text },
-                    Platform.OS === "web" && ({ outlineStyle: "none" } as any),
-                  ]}
+                  style={[styles.input, { color: theme.text }]}
                   value={name}
                   onChangeText={setName}
                   onFocus={() => setFocusedField("name")}
@@ -164,7 +158,6 @@ export default function Register() {
                 />
               </View>
 
-              {/* EMAIL */}
               <View
                 style={[
                   styles.inputWrapper,
@@ -187,21 +180,18 @@ export default function Register() {
                   ref={emailRef}
                   placeholder="Email Address"
                   placeholderTextColor="#94a3b8"
-                  style={[
-                    styles.input,
-                    { color: theme.text },
-                    Platform.OS === "web" && ({ outlineStyle: "none" } as any),
-                  ]}
+                  style={[styles.input, { color: theme.text }]}
                   value={email}
                   onChangeText={setEmail}
                   onFocus={() => setFocusedField("email")}
                   onBlur={() => setFocusedField(null)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
                   returnKeyType="next"
                   onSubmitEditing={() => passwordRef.current?.focus()}
                 />
               </View>
 
-              {/* PASSWORD */}
               <View
                 style={[
                   styles.inputWrapper,
@@ -225,11 +215,7 @@ export default function Register() {
                   placeholder="Create Password"
                   placeholderTextColor="#94a3b8"
                   secureTextEntry={!showPassword}
-                  style={[
-                    styles.input,
-                    { color: theme.text },
-                    Platform.OS === "web" && ({ outlineStyle: "none" } as any),
-                  ]}
+                  style={[styles.input, { color: theme.text }]}
                   value={password}
                   onChangeText={setPassword}
                   onFocus={() => setFocusedField("password")}
@@ -237,9 +223,15 @@ export default function Register() {
                   returnKeyType="next"
                   onSubmitEditing={() => confirmPasswordRef.current?.focus()}
                 />
+                <Pressable onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#94a3b8"
+                  />
+                </Pressable>
               </View>
 
-              {/* 🟢 CONFIRM PASSWORD COLUMN */}
               <View
                 style={[
                   styles.inputWrapper,
@@ -263,11 +255,7 @@ export default function Register() {
                   placeholder="Confirm Password"
                   placeholderTextColor="#94a3b8"
                   secureTextEntry={!showPassword}
-                  style={[
-                    styles.input,
-                    { color: theme.text },
-                    Platform.OS === "web" && ({ outlineStyle: "none" } as any),
-                  ]}
+                  style={[styles.input, { color: theme.text }]}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   onFocus={() => setFocusedField("confirm")}
@@ -275,6 +263,13 @@ export default function Register() {
                   returnKeyType="done"
                   onSubmitEditing={handleRegister}
                 />
+                <Pressable onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#94a3b8"
+                  />
+                </Pressable>
               </View>
 
               <Pressable
@@ -316,7 +311,12 @@ const styles = StyleSheet.create({
   container: { padding: 24, justifyContent: "center", flexGrow: 1 },
   headerSection: { marginBottom: 25, alignItems: "center" },
   title: { fontSize: 32, fontWeight: "800" },
-  subtitle: { marginTop: 8, fontSize: 16, fontWeight: "500" },
+  subtitle: {
+    marginTop: 8,
+    fontSize: 16,
+    fontWeight: "500",
+    textAlign: "center",
+  },
   card: {
     padding: 24,
     borderRadius: 30,

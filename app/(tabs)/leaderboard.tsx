@@ -63,7 +63,10 @@ export default function Leaderboard() {
     <View
       style={{ flex: 1, backgroundColor: isDarkMode ? "#0f172a" : "#e0e7ff" }}
     >
-      <LinearGradient colors={gradientColors} style={styles.container}>
+      <LinearGradient
+        colors={["#color1", "#color2"] as const}
+        style={styles.container}
+      >
         <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
 
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>

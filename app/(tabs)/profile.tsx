@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -14,6 +15,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import {
@@ -22,11 +24,15 @@ import {
 } from "react-native-safe-area-context";
 import { auth, db } from "../../config/firebase";
 import { useTheme } from "../../context/ThemeContext";
+
 export default function Profile() {
   const { isDarkMode, theme, toggleTheme } = useTheme();
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isPushEnabled, setIsPushEnabled] = useState(true);
+
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [newNameInput, setNewNameInput] = useState("");
 
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -39,6 +45,7 @@ export default function Profile() {
     if (snapshot.exists()) {
       const data = snapshot.val();
       setUserData(data);
+      setNewNameInput(data.name || "");
       setIsPushEnabled(data.pushNotifications ?? true);
     }
     setLoading(false);
@@ -58,30 +65,27 @@ export default function Profile() {
     }
   };
 
-  const handleEditProfile = () => {
-    if (Platform.OS === "web") {
-      const newName = window.prompt("Enter your new name:", userData?.name);
-      if (newName && newName.trim() !== "") saveName(newName);
-    } else {
-      Alert.prompt(
-        "Edit Profile",
-        "Enter your new name",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Save",
-            onPress: (name: string | undefined) => saveName(name || ""),
-          },
-        ],
-        "plain-text",
-        userData?.name,
-      );
+  const saveName = async () => {
+    if (!newNameInput.trim()) {
+      Alert.alert("Error", "Name cannot be empty");
+      return;
     }
-  };
+    const user = auth.currentUser;
+    if (!user) return;
 
-  const saveName = async (newName: string) => {
-    await handleUpdatePreference("name", newName.trim());
-    fetchData();
+    try {
+      // 1. Update Firebase
+      await update(ref(db, `users/${user.uid}`), { name: newNameInput.trim() });
+
+      // 2. Update local state
+      setUserData((prev: any) => ({ ...prev, name: newNameInput.trim() }));
+
+      // 3. Close Modal
+      setIsEditModalVisible(false);
+      Alert.alert("Success", "Name updated successfully!");
+    } catch (err) {
+      Alert.alert("Error", "Failed to update name");
+    }
   };
 
   const handleLogout = async () => {
@@ -107,16 +111,59 @@ export default function Profile() {
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
 
+      <Modal
+        visible={isEditModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
+              Edit Profile Name
+            </Text>
+            <TextInput
+              style={[
+                styles.modalInput,
+                { color: theme.text, borderColor: theme.border },
+              ]}
+              value={newNameInput}
+              onChangeText={setNewNameInput}
+              placeholder="Enter new name"
+              placeholderTextColor="#94a3b8"
+              autoFocus={Platform.OS !== "web"}
+            />
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={styles.modalBtnCancel}
+                onPress={() => setIsEditModalVisible(false)}
+              >
+                <Text style={{ color: "#ef4444", fontWeight: "bold" }}>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalBtnSave, { backgroundColor: theme.tint }]}
+                onPress={saveName}
+              >
+                <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                  Save Changes
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             padding: 20,
-            paddingTop: insets.top + 20,
+            paddingTop: 10, // Fixed upper space
             paddingBottom: tabBarHeight + insets.bottom + 40,
           }}
         >
-          {/* HEADER SECTION */}
           <View style={styles.header}>
             <View style={styles.avatarContainer}>
               <View style={[styles.avatar, { backgroundColor: theme.tint }]}>
@@ -198,7 +245,6 @@ export default function Profile() {
             </Text>
           </View>
 
-          {/* ACHIEVEMENTS */}
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
             Achievements 🏅
           </Text>
@@ -233,21 +279,20 @@ export default function Profile() {
             </View>
           </ScrollView>
 
-          {/* PREFERENCES */}
           <View style={[styles.card, { backgroundColor: theme.card }]}>
             <Text style={[styles.cardTitle, { color: theme.text }]}>
               Preferences
             </Text>
             <View style={styles.settingsRow}>
               <View style={styles.settingsLabelGroup}>
-                <Ionicons name="moon-outline" size={20} color={theme.icon} />
+                <Ionicons name="moon-outline" size={20} color={theme.tint} />
                 <Text style={[styles.settingsLabel, { color: theme.text }]}>
                   Dark Mode
                 </Text>
               </View>
               <Switch
                 value={isDarkMode}
-                onValueChange={toggleTheme} // Triggers global update
+                onValueChange={toggleTheme}
                 trackColor={{ false: "#cbd5e1", true: theme.tint }}
               />
             </View>
@@ -256,7 +301,7 @@ export default function Profile() {
                 <Ionicons
                   name="notifications-outline"
                   size={20}
-                  color={theme.icon}
+                  color={theme.tint}
                 />
                 <Text style={[styles.settingsLabel, { color: theme.text }]}>
                   Push Notifications
@@ -273,10 +318,12 @@ export default function Profile() {
             </View>
           </View>
 
-          {/* ACTIONS */}
           <View style={[styles.card, { backgroundColor: theme.card }]}>
-            <Pressable style={styles.actionRow} onPress={handleEditProfile}>
-              <Ionicons name="person-outline" size={20} color={theme.icon} />
+            <Pressable
+              style={styles.actionRow}
+              onPress={() => setIsEditModalVisible(true)}
+            >
+              <Ionicons name="person-outline" size={20} color={theme.tint} />
               <Text style={[styles.actionText, { color: theme.text }]}>
                 Edit Profile
               </Text>
@@ -308,7 +355,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  header: { alignItems: "center", marginBottom: 30 },
+  header: { alignItems: "center", marginBottom: 10 },
   avatarContainer: { position: "relative", marginBottom: 15 },
   avatar: {
     width: 100,
@@ -418,5 +465,44 @@ const styles = StyleSheet.create({
   horizontalDivider: {
     height: 1,
     marginVertical: 5,
+  },
+  // --- MODAL STYLES ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "85%",
+    padding: 25,
+    borderRadius: 25,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    marginBottom: 25,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 15,
+  },
+  modalBtnCancel: {
+    padding: 12,
+  },
+  modalBtnSave: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
 });

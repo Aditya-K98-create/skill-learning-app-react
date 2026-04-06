@@ -39,7 +39,7 @@ export default function GoalDetails() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const goal = useMemo(
-    () => goals.find((g) => g.id === goalId),
+    () => goals.find((g: any) => g.id === goalId),
     [goals, goalId],
   );
   const tasks = goal?.tasks || [];

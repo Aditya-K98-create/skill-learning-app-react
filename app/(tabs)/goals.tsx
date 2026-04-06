@@ -86,8 +86,7 @@ export default function Goals() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-          {/* HEADER */}
+        <View style={[styles.container, { paddingTop: 10 }]}>
           <View style={styles.headerSection}>
             <Text style={[styles.title, { color: theme.text }]}>
               My Goals 🎯
@@ -97,7 +96,6 @@ export default function Goals() {
             </Text>
           </View>
 
-          {/* INPUT CARD */}
           <View
             style={[
               styles.inputWrapper,
@@ -126,7 +124,6 @@ export default function Goals() {
             </Pressable>
           </View>
 
-          {/* GOALS LIST */}
           <FlatList
             data={goals}
             keyExtractor={(item) => item.id}
@@ -178,7 +175,6 @@ export default function Goals() {
                         </Text>
                       </View>
 
-                      {/* Progress Bar per Goal */}
                       <View style={styles.goalProgressContainer}>
                         <View
                           style={[
