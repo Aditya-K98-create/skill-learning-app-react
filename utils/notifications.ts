@@ -3,7 +3,6 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-// Configure how notifications appear when the app is foregrounded
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -14,9 +13,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-/**
- * Registers the device for push notifications and sets up Android channels.
- */
 export async function registerForPushNotificationsAsync() {
   let token;
 
@@ -64,9 +60,6 @@ export async function registerForPushNotificationsAsync() {
   return token;
 }
 
-/**
- * Schedules a local notification.
- */
 export async function scheduleSmartNotification(
   message: string,
   title: string = "Skill Coach 🤖",
@@ -82,7 +75,6 @@ export async function scheduleSmartNotification(
       sound: true,
     },
     trigger: {
-      // FIXED: Changed to the correct enum name for your version
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: seconds,
       repeats: false,
@@ -90,9 +82,6 @@ export async function scheduleSmartNotification(
   });
 }
 
-/**
- * Cancel all pending notifications
- */
 export async function cancelAllNotifications() {
   await Notifications.cancelAllScheduledNotificationsAsync();
 }

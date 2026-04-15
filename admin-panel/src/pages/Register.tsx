@@ -1,54 +1,54 @@
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { ref, set } from "firebase/database";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { auth } from "../services/firebase";
+import { auth, db } from "../services/firebase";
 
-export default function Login() {
+export default function Register() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [name, setName] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!email || !password) {
-      setErrorMsg("Please enter both email and password");
+    if (!email || !password || !name) {
+      setErrorMsg("Please fill in all fields");
       return;
     }
 
     try {
       setLoading(true);
-      const userCredential = await signInWithEmailAndPassword(
+
+      const userCredential = await createUserWithEmailAndPassword(
         auth,
         email.trim(),
         password,
       );
       const user = userCredential.user;
 
-      const adminEmail = "adityakandalkar236@gmail.com";
+      await set(ref(db, `admins/${user.uid}`), {
+        name: name.trim(),
+        email: email.trim(),
+        role: "admin",
+        createdAt: Date.now(),
+      });
 
-      if (user.email === adminEmail) {
-        navigate("/dashboard");
-      } else {
-        setErrorMsg("Unauthorized: This area is for Admins only.");
-        await signOut(auth);
-      }
+      alert("Admin Account Created! 🚀");
+      navigate("/dashboard");
     } catch (error: any) {
       console.error(error);
-      if (
-        error.code === "auth/invalid-credential" ||
-        error.code === "auth/wrong-password" ||
-        error.code === "auth/user-not-found"
-      ) {
-        setErrorMsg("Invalid email or password. Please try again.");
-      } else if (error.code === "auth/too-many-requests") {
-        setErrorMsg("Too many failed attempts. Try again later.");
+      if (error.code === "auth/email-already-in-use") {
+        setErrorMsg("This email is already registered.");
+      } else if (error.code === "auth/weak-password") {
+        setErrorMsg("Password should be at least 6 characters.");
       } else {
-        setErrorMsg("An error occurred. Please try again.");
+        setErrorMsg("Failed to create account. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -59,17 +59,29 @@ export default function Login() {
     <div style={styles.container}>
       <div style={styles.card}>
         <div style={styles.logoContainer}>
-          <div style={styles.logoIcon}>🛡️</div>
+          <div style={styles.logoIcon}>📝</div>
         </div>
 
-        <h2 style={styles.title}>Admin Control</h2>
-        <p style={styles.subtitle}>Skill Learning App Management</p>
+        <h2 style={styles.title}>Create Admin</h2>
+        <p style={styles.subtitle}>Setup your management credentials</p>
 
         {errorMsg && <div style={styles.errorBox}>{errorMsg}</div>}
 
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleRegister}>
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Email Address</label>
+            <label style={styles.label}>Full Name</label>
+            <input
+              type="text"
+              placeholder="Aditya K"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              style={styles.input}
+              disabled={loading}
+            />
+          </div>
+
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Admin Email</label>
             <input
               type="email"
               placeholder="admin@skillapp.com"
@@ -101,20 +113,23 @@ export default function Login() {
             }}
             disabled={loading}
           >
-            {loading ? "Verifying..." : "Sign In to Dashboard"}
+            {loading ? "Creating Account..." : "Register Admin"}
           </button>
         </form>
 
-        <div style={styles.footer}>
-          <p style={styles.footerText}>Unauthorized access is prohibited.</p>
-          <div style={styles.divider}></div>
-          <p style={styles.registerPrompt}>
-            New Admin?{" "}
-            <Link to="/register" style={styles.link}>
-              Create Account
-            </Link>
-          </p>
-        </div>
+        <p style={styles.footerText}>
+          Already have an account?{" "}
+          <Link
+            to="/"
+            style={{
+              color: "#4f46e5",
+              textDecoration: "none",
+              fontWeight: "bold",
+            }}
+          >
+            Login
+          </Link>
+        </p>
       </div>
     </div>
   );
@@ -135,8 +150,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: "24px",
     width: "100%",
     maxWidth: "400px",
-    boxShadow:
-      "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
     textAlign: "center",
     border: "1px solid #e2e8f0",
   },
@@ -175,7 +189,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: "1px solid #fee2e2",
     fontWeight: "600",
   },
-  inputGroup: { textAlign: "left", marginBottom: "20px" },
+  inputGroup: { textAlign: "left", marginBottom: "15px" },
   label: {
     display: "block",
     fontSize: "12px",
@@ -203,14 +217,5 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: "16px",
     marginTop: "10px",
   },
-  footer: { marginTop: "25px" },
-  footerText: { fontSize: "11px", color: "#94a3b8", marginBottom: "15px" },
-  divider: {
-    height: "1px",
-    backgroundColor: "#e2e8f0",
-    width: "100%",
-    marginBottom: "15px",
-  },
-  registerPrompt: { fontSize: "14px", color: "#64748b" },
-  link: { color: "#4f46e5", textDecoration: "none", fontWeight: "bold" },
+  footerText: { marginTop: "25px", fontSize: "14px", color: "#94a3b8" },
 };

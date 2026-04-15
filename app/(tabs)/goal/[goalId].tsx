@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   FlatList,
   KeyboardAvoidingView,
@@ -21,6 +23,8 @@ import {
 import { useGoals } from "../../../components/context/GoalContext";
 import { useTheme } from "../../../context/ThemeContext";
 
+type FilterType = "all" | "pending" | "completed";
+
 export default function GoalDetails() {
   const { goalId } = useLocalSearchParams();
   const { goals, addTask, toggleTask, deleteTask, updateTask } = useGoals();
@@ -30,10 +34,14 @@ export default function GoalDetails() {
   const tabBarHeight = useBottomTabBarHeight();
 
   const [taskName, setTaskName] = useState("");
-  const [filter, setFilter] = useState<"all" | "pending" | "completed">("all");
+  const [filter, setFilter] = useState<FilterType>("all");
+
   const [editingTask, setEditingTask] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+
+  const [renameVisible, setRenameVisible] = useState(false);
+  const [renameTitle, setRenameTitle] = useState("");
 
   const [xpVisible, setXpVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -46,6 +54,7 @@ export default function GoalDetails() {
 
   const completedCount = tasks.filter((t: any) => t.completed).length;
   const totalCount = tasks.length;
+  const pendingCount = totalCount - completedCount;
   const progressPercent =
     totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
 
@@ -57,17 +66,23 @@ export default function GoalDetails() {
     );
   }
 
-  const filteredTasks = tasks.filter((t: any) => {
-    if (filter === "completed") return t.completed;
-    if (filter === "pending") return !t.completed;
-    return true;
-  });
+  const TABS: { key: FilterType; label: string }[] = [
+    { key: "all", label: `All (${totalCount})` },
+    { key: "pending", label: `Pending (${pendingCount})` },
+    { key: "completed", label: `Done (${completedCount})` },
+  ];
 
-  const handleAddTask = async () => {
-    if (!taskName.trim()) return;
-    await addTask(goal.id, taskName.trim());
-    setTaskName("");
-  };
+  const filteredTasks = useMemo(() => {
+    const filtered = tasks.filter((t: any) => {
+      if (filter === "completed") return t.completed;
+      if (filter === "pending") return !t.completed;
+      return true;
+    });
+
+    return [...filtered].sort(
+      (a, b) => Number(a.completed) - Number(b.completed),
+    );
+  }, [tasks, filter]);
 
   const showXP = () => {
     setXpVisible(true);
@@ -87,8 +102,14 @@ export default function GoalDetails() {
   };
 
   const handleToggle = (taskId: string, currentStatus: boolean) => {
-    toggleTask(goal.id, taskId);
-    if (!currentStatus) showXP();
+    toggleTask(goal.id, taskId, !currentStatus);
+    if (!currentStatus) showXP(); // only celebrate when completing
+  };
+
+  const handleAddTask = async () => {
+    if (!taskName.trim()) return;
+    await addTask(goal.id, taskName.trim());
+    setTaskName("");
   };
 
   const openEdit = (item: any) => {
@@ -103,138 +124,151 @@ export default function GoalDetails() {
     setModalVisible(false);
   };
 
+  const openRename = () => {
+    setRenameTitle(goal.title);
+    setRenameVisible(true);
+  };
+
+  const handleRename = async () => {
+    if (!renameTitle.trim()) return;
+
+    setRenameVisible(false);
+  };
+
+  const confirmDeleteTask = (taskId: string) => {
+    Alert.alert("Delete Task?", "This will permanently remove this task.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => deleteTask(goal.id, taskId),
+      },
+    ]);
+  };
+
+  const taskAccentColor = (completed: boolean) =>
+    completed ? "#22c55e" : theme.tint;
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: theme.background }}
+      edges={["bottom", "left", "right"]}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        {/* CUSTOM HEADER */}
-        <View style={[styles.header, { paddingTop: 10 }]}>
-          <Pressable
-            onPress={() => router.back()}
-            style={[styles.backBtn, { backgroundColor: theme.card }]}
-          >
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
-          </Pressable>
-          <Text
-            style={[styles.headerTitle, { color: theme.text }]}
-            numberOfLines={1}
-          >
-            {goal.title}
+        <LinearGradient
+          colors={["#6C63FF", "#4ECDC4"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.heroGradient, { paddingTop: insets.top + 10 }]}
+        >
+          <View style={styles.navRow}>
+            <Pressable onPress={() => router.back()} style={styles.ghostBtn}>
+              <Ionicons name="arrow-back" size={20} color="#fff" />
+            </Pressable>
+
+            <Text style={styles.heroTitle} numberOfLines={1}>
+              {goal.title}
+            </Text>
+
+            <View style={styles.headerActions}>
+              <Pressable style={styles.ghostBtn} onPress={openRename}>
+                <Ionicons name="pencil" size={16} color="#fff" />
+              </Pressable>
+            </View>
+          </View>
+
+          <Text style={styles.heroPct}>{progressPercent}%</Text>
+          <Text style={styles.heroPctSub}>
+            {progressPercent === 100
+              ? "Goal achieved 🏆"
+              : `Mastery · ${pendingCount} task${pendingCount === 1 ? "" : "s"} remaining`}
           </Text>
-          <View style={{ width: 40 }} />
-        </View>
+
+          <View style={styles.heroBarTrack}>
+            <View
+              style={[styles.heroBarFill, { width: `${progressPercent}%` }]}
+            />
+          </View>
+
+          <View style={styles.heroStats}>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{totalCount}</Text>
+              <Text style={styles.heroStatLbl}>Tasks</Text>
+            </View>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{completedCount}</Text>
+              <Text style={styles.heroStatLbl}>Done</Text>
+            </View>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{pendingCount}</Text>
+              <Text style={styles.heroStatLbl}>Left</Text>
+            </View>
+          </View>
+        </LinearGradient>
 
         <FlatList
           data={filteredTasks}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            padding: 20,
+            paddingHorizontal: 20,
+            paddingTop: 16,
             paddingBottom: tabBarHeight + insets.bottom + 20,
           }}
           ListHeaderComponent={
             <>
               <View
-                style={[styles.progressCard, { backgroundColor: theme.card }]}
-              >
-                <Text style={[styles.smartMessage, { color: theme.tint }]}>
-                  {progressPercent === 100
-                    ? "Goal Smashed! 🏆"
-                    : "Keep going, you're doing great! 💪"}
-                </Text>
-
-                <View style={styles.progressLabelRow}>
-                  <Text style={[styles.progressText, { color: theme.subText }]}>
-                    Mastery
-                  </Text>
-                  <Text style={[styles.progressText, { color: theme.subText }]}>
-                    {progressPercent}%
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    styles.progressBarBg,
-                    { backgroundColor: isDarkMode ? "#334155" : "#f1f5f9" },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.progressBarFill,
-                      {
-                        width: `${progressPercent}%`,
-                        backgroundColor: theme.tint,
-                      },
-                    ]}
-                  />
-                </View>
-
-                <View
-                  style={[
-                    styles.statsRow,
-                    { borderTopColor: isDarkMode ? "#334155" : "#f1f5f9" },
-                  ]}
-                >
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statNum, { color: theme.text }]}>
-                      {totalCount}
-                    </Text>
-                    <Text style={styles.statLab}>Tasks</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statNum, { color: "#22c55e" }]}>
-                      {completedCount}
-                    </Text>
-                    <Text style={styles.statLab}>Done</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statNum, { color: "#f59e0b" }]}>
-                      {totalCount - completedCount}
-                    </Text>
-                    <Text style={styles.statLab}>Left</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View
                 style={[styles.inputWrapper, { backgroundColor: theme.card }]}
               >
                 <TextInput
                   style={[styles.input, { color: theme.text }]}
-                  placeholder="Add a sub-task..."
+                  placeholder="Add a new task..."
                   placeholderTextColor={isDarkMode ? "#94a3b8" : "#64748b"}
                   value={taskName}
                   onChangeText={setTaskName}
+                  onSubmitEditing={handleAddTask}
+                  returnKeyType="done"
                 />
-                <Pressable style={styles.addBtn} onPress={handleAddTask}>
-                  <Ionicons name="add-circle" size={32} color={theme.tint} />
+                <Pressable
+                  style={[styles.addBtn, { backgroundColor: theme.tint }]}
+                  onPress={handleAddTask}
+                >
+                  <Ionicons name="add" size={22} color="#fff" />
                 </Pressable>
               </View>
 
               <View style={styles.filterRow}>
-                {["all", "pending", "completed"].map((f) => (
-                  <Pressable
-                    key={f}
-                    style={[
-                      styles.filterTab,
-                      { backgroundColor: theme.card },
-                      filter === f && { backgroundColor: theme.tint },
-                    ]}
-                    onPress={() => setFilter(f as any)}
-                  >
-                    <Text
+                {TABS.map((tab) => {
+                  const isActive = filter === tab.key;
+                  return (
+                    <Pressable
+                      key={tab.key}
                       style={[
-                        styles.filterTabText,
-                        { color: theme.subText },
-                        filter === f && { color: "#fff" },
+                        styles.filterTab,
+                        {
+                          backgroundColor: isActive
+                            ? theme.tint
+                            : isDarkMode
+                              ? "#1e293b"
+                              : theme.card,
+                        },
                       ]}
+                      onPress={() => setFilter(tab.key)}
                     >
-                      {f.toUpperCase()}
-                    </Text>
-                  </Pressable>
-                ))}
+                      <Text
+                        style={[
+                          styles.filterTabText,
+                          { color: isActive ? "#fff" : theme.subText },
+                        ]}
+                      >
+                        {tab.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </>
           }
@@ -242,73 +276,101 @@ export default function GoalDetails() {
             <View style={styles.emptyContainer}>
               <Ionicons
                 name="clipboard-outline"
-                size={50}
+                size={48}
                 color={isDarkMode ? "#334155" : "#cbd5e1"}
               />
               <Text style={[styles.emptyText, { color: theme.subText }]}>
-                No tasks found in this view
+                {filter === "all"
+                  ? "No tasks yet — add one above!"
+                  : `No ${filter} tasks`}
               </Text>
             </View>
           }
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.taskCard,
-                { backgroundColor: theme.card },
-                item.completed && styles.completedCard,
-              ]}
-            >
-              <Pressable
-                style={styles.taskMain}
-                onPress={() => handleToggle(item.id, item.completed)}
+          renderItem={({ item }) => {
+            const accent = taskAccentColor(item.completed);
+
+            if (editingTask?.id === item.id && modalVisible === false) {
+            }
+
+            return (
+              <View
+                style={[
+                  styles.taskCard,
+                  { backgroundColor: theme.card },
+                  item.completed && styles.completedCard,
+                ]}
               >
                 <View
-                  style={[
-                    styles.checkbox,
-                    { borderColor: isDarkMode ? "#475569" : "#cbd5e1" },
-                    item.completed && styles.checkboxActive,
-                  ]}
+                  style={[styles.taskAccent, { backgroundColor: accent }]}
+                />
+
+                <Pressable
+                  style={styles.taskMain}
+                  onPress={() => handleToggle(item.id, item.completed)}
                 >
-                  {item.completed && (
-                    <Ionicons name="checkmark" size={16} color="white" />
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text
+                  <View
                     style={[
-                      styles.taskTitle,
-                      { color: theme.text },
-                      item.completed && styles.strikeText,
+                      styles.checkbox,
+                      { borderColor: isDarkMode ? "#475569" : "#cbd5e1" },
+                      item.completed && {
+                        backgroundColor: "#22c55e",
+                        borderColor: "#22c55e",
+                      },
                     ]}
                   >
-                    {item.title}
-                  </Text>
-                  <Text style={[styles.taskXp, { color: theme.tint }]}>
-                    🎯 +10 XP
-                  </Text>
-                </View>
-              </Pressable>
+                    {item.completed && (
+                      <Ionicons name="checkmark" size={14} color="white" />
+                    )}
+                  </View>
 
-              <View style={styles.taskActions}>
-                <Pressable
-                  onPress={() => openEdit(item)}
-                  style={styles.iconPadding}
-                >
-                  <Ionicons
-                    name="pencil"
-                    size={18}
-                    color={isDarkMode ? "#94a3b8" : "#64748b"}
-                  />
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.taskTitle,
+                        { color: theme.text },
+                        item.completed && styles.strikeText,
+                      ]}
+                    >
+                      {item.title}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.taskXp,
+                        {
+                          color: item.completed ? "#22c55e" : theme.tint,
+                        },
+                      ]}
+                    >
+                      {item.completed ? "+10 XP earned" : "+10 XP on complete"}
+                    </Text>
+                  </View>
                 </Pressable>
-                <Pressable
-                  onPress={() => deleteTask(goal.id, item.id)}
-                  style={styles.iconPadding}
-                >
-                  <Ionicons name="trash" size={18} color="#ef4444" />
-                </Pressable>
+
+                <View style={styles.taskActions}>
+                  {!item.completed && (
+                    <Pressable
+                      onPress={() => openEdit(item)}
+                      style={[
+                        styles.actionBtn,
+                        {
+                          backgroundColor: isDarkMode ? "#1e293b" : "#f0effe",
+                        },
+                      ]}
+                    >
+                      <Ionicons name="pencil" size={14} color={theme.tint} />
+                    </Pressable>
+                  )}
+                  <Pressable
+                    onPress={() => confirmDeleteTask(item.id)}
+                    style={[styles.actionBtn, { backgroundColor: "#fef2f2" }]}
+                  >
+                    <Ionicons name="trash" size={14} color="#ef4444" />
+                  </Pressable>
+                </View>
               </View>
-            </View>
-          )}
+            );
+          }}
         />
 
         {xpVisible && (
@@ -322,13 +384,14 @@ export default function GoalDetails() {
           </Animated.View>
         )}
 
-        <Modal visible={modalVisible} transparent animationType="fade">
+        <Modal visible={modalVisible} transparent animationType="slide">
           <View style={styles.modalBg}>
             <View
               style={[styles.modalContent, { backgroundColor: theme.card }]}
             >
+              <View style={styles.modalHandle} />
               <Text style={[styles.modalHeader, { color: theme.text }]}>
-                Update Task
+                Edit task
               </Text>
               <TextInput
                 style={[
@@ -341,24 +404,80 @@ export default function GoalDetails() {
                 value={newTitle}
                 onChangeText={setNewTitle}
                 autoFocus
+                returnKeyType="done"
+                onSubmitEditing={handleUpdate}
               />
               <View style={styles.modalButtons}>
                 <Pressable
                   style={[
-                    styles.cancelBtn,
-                    { backgroundColor: isDarkMode ? "#334155" : "#f1f5f9" },
+                    styles.modalCancelBtn,
+                    {
+                      backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
+                    },
                   ]}
                   onPress={() => setModalVisible(false)}
                 >
-                  <Text style={[styles.cancelText, { color: theme.subText }]}>
+                  <Text
+                    style={[styles.modalCancelText, { color: theme.subText }]}
+                  >
                     Cancel
                   </Text>
                 </Pressable>
                 <Pressable
-                  style={[styles.updateBtn, { backgroundColor: theme.tint }]}
+                  style={[styles.modalSaveBtn, { backgroundColor: theme.tint }]}
                   onPress={handleUpdate}
                 >
-                  <Text style={styles.updateText}>Save</Text>
+                  <Text style={styles.modalSaveText}>Save</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal visible={renameVisible} transparent animationType="slide">
+          <View style={styles.modalBg}>
+            <View
+              style={[styles.modalContent, { backgroundColor: theme.card }]}
+            >
+              <View style={styles.modalHandle} />
+              <Text style={[styles.modalHeader, { color: theme.text }]}>
+                Rename goal
+              </Text>
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: isDarkMode ? theme.background : "#f1f5f9",
+                    color: theme.text,
+                  },
+                ]}
+                value={renameTitle}
+                onChangeText={setRenameTitle}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={handleRename}
+              />
+              <View style={styles.modalButtons}>
+                <Pressable
+                  style={[
+                    styles.modalCancelBtn,
+                    {
+                      backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
+                    },
+                  ]}
+                  onPress={() => setRenameVisible(false)}
+                >
+                  <Text
+                    style={[styles.modalCancelText, { color: theme.subText }]}
+                  >
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modalSaveBtn, { backgroundColor: theme.tint }]}
+                  onPress={handleRename}
+                >
+                  <Text style={styles.modalSaveText}>Rename</Text>
                 </Pressable>
               </View>
             </View>
@@ -370,107 +489,156 @@ export default function GoalDetails() {
 }
 
 const styles = StyleSheet.create({
-  header: {
+  heroGradient: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  navRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    height: 60,
+    marginBottom: 16,
   },
-  backBtn: {
-    padding: 8,
-    borderRadius: 12,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    flex: 1,
-    textAlign: "center",
-  },
-  progressCard: {
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 20,
-    elevation: 3,
-  },
-  smartMessage: {
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "center",
-    marginBottom: 15,
-  },
-  progressLabelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  progressText: {
-    fontSize: 13,
-    fontWeight: "bold",
-  },
-  progressBarBg: {
-    height: 8,
+  ghostBtn: {
+    width: 34,
+    height: 34,
     borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  heroTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#fff",
+    textAlign: "center",
+    marginHorizontal: 8,
+  },
+  headerActions: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  heroPct: {
+    fontSize: 48,
+    fontWeight: "900",
+    color: "#fff",
+    textAlign: "center",
+    lineHeight: 52,
+    letterSpacing: -1,
+  },
+  heroPctSub: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.7)",
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 14,
+    fontWeight: "500",
+  },
+  heroBarTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.25)",
     overflow: "hidden",
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  progressBarFill: {
+  heroBarFill: {
     height: "100%",
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.9)",
   },
-  statsRow: {
+  heroStats: {
     flexDirection: "row",
     justifyContent: "space-around",
-    borderTopWidth: 1,
-    paddingTop: 15,
   },
-  statItem: { alignItems: "center" },
-  statNum: { fontSize: 16, fontWeight: "bold" },
-  statLab: { fontSize: 10, color: "#94a3b8", marginTop: 2 },
+  heroStat: {
+    flex: 1,
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 12,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+  },
+  heroStatNum: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#fff",
+  },
+  heroStatLbl: {
+    fontSize: 9,
+    color: "rgba(255,255,255,0.65)",
+    marginTop: 2,
+    fontWeight: "500",
+  },
 
   inputWrapper: {
     flexDirection: "row",
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 6,
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
   },
   input: {
     flex: 1,
-    paddingHorizontal: 15,
-    height: 45,
-    fontSize: 15,
+    paddingHorizontal: 14,
+    height: 44,
+    fontSize: 14,
+    fontWeight: "500",
   },
   addBtn: {
-    paddingRight: 5,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
+
   filterRow: {
     flexDirection: "row",
-    marginBottom: 20,
-    gap: 8,
+    marginBottom: 16,
+    gap: 6,
   },
   filterTab: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    flex: 1,
+    paddingVertical: 7,
     borderRadius: 10,
+    alignItems: "center",
   },
   filterTabText: {
-    fontSize: 11,
-    fontWeight: "bold",
+    fontSize: 10,
+    fontWeight: "700",
   },
+
   taskCard: {
-    borderRadius: 18,
-    padding: 15,
+    borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
   },
   completedCard: {
-    opacity: 0.6,
+    opacity: 0.55,
+  },
+
+  taskAccent: {
+    width: 4,
+    alignSelf: "stretch",
   },
   taskMain: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    padding: 14,
   },
   checkbox: {
     width: 22,
@@ -480,97 +648,119 @@ const styles = StyleSheet.create({
     marginRight: 12,
     justifyContent: "center",
     alignItems: "center",
-  },
-  checkboxActive: {
-    backgroundColor: "#22c55e",
-    borderColor: "#22c55e",
+    flexShrink: 0,
   },
   taskTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
   },
   strikeText: {
     textDecorationLine: "line-through",
   },
+
   taskXp: {
-    fontSize: 11,
-    fontWeight: "bold",
-    marginTop: 2,
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 3,
   },
   taskActions: {
     flexDirection: "row",
-    gap: 5,
+    gap: 6,
+    paddingRight: 12,
   },
-  iconPadding: {
-    padding: 5,
+  actionBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    justifyContent: "center",
+    alignItems: "center",
   },
+
   xpPopup: {
     position: "absolute",
     top: "45%",
     alignSelf: "center",
     backgroundColor: "#22c55e",
-    paddingHorizontal: 25,
+    paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 25,
+    borderRadius: 24,
     elevation: 10,
     zIndex: 999,
   },
   xpPopupText: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "800",
   },
+
   emptyContainer: {
     alignItems: "center",
-    marginTop: 40,
+    justifyContent: "center",
+    marginTop: 60,
+    gap: 12,
   },
   emptyText: {
-    marginTop: 10,
+    fontSize: 14,
+    textAlign: "center",
   },
+
   modalBg: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "center",
-    padding: 20,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    borderRadius: 24,
-    padding: 25,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    paddingBottom: 36,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#e2e8f0",
+    alignSelf: "center",
+    marginBottom: 18,
   },
   modalHeader: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 20,
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 16,
   },
   modalInput: {
     borderRadius: 12,
-    padding: 15,
-    fontSize: 16,
-    marginBottom: 25,
+    padding: 14,
+    fontSize: 15,
+    fontWeight: "500",
+    marginBottom: 20,
   },
   modalButtons: {
     flexDirection: "row",
-    gap: 12,
+    gap: 10,
   },
-  cancelBtn: {
+  modalCancelBtn: {
     flex: 1,
-    padding: 15,
+    padding: 14,
     alignItems: "center",
     borderRadius: 12,
   },
-  cancelText: {
-    fontWeight: "bold",
+  modalCancelText: {
+    fontWeight: "700",
+    fontSize: 14,
   },
-  updateBtn: {
+  modalSaveBtn: {
     flex: 2,
-    padding: 15,
+    padding: 14,
     alignItems: "center",
     borderRadius: 12,
   },
-  updateText: {
-    fontWeight: "bold",
+  modalSaveText: {
+    fontWeight: "700",
     color: "#fff",
+    fontSize: 14,
   },
+
   center: {
     flex: 1,
     justifyContent: "center",

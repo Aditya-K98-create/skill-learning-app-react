@@ -138,12 +138,10 @@ export default function Learning() {
     if (!status.isLoaded) return;
     if (status.isPlaying) setVideoLoading(false);
 
-    // FIX: Guard against 0 duration or uninitialized position to prevent 100% bug
     if (status.durationMillis > 0 && status.positionMillis > 0) {
       const calculatedProgress =
         (status.positionMillis / status.durationMillis) * 100;
 
-      // Only update if the progress is actually moving
       setVideos((prev) =>
         prev.map((v) =>
           v.id === currentVideo.id
